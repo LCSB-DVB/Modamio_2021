@@ -1,0 +1,12 @@
+%distcomp.feature( 'LocalUseMpiexec', false )
+%addpath(genpath('S:\Libraries\hcsforge\LCSBMatlabLibrary'))
+addpath(genpath('S:\Libraries\hcsforge\LCSBMatlabLibrary\imaging'))
+disp('Loaded imaging')
+addpath(genpath('S:\Libraries\hcsforge\LCSBMatlabLibrary\Bioformats'))
+disp('Loaded Bioformats')
+addpath(genpath('S:\Libraries\hcsforge\CV8000'))
+disp('Loaded CV8000')
+addpath(genpath('S:\HCS_Platform\Scripts_Repository\Retro'))
+disp('Loaded Retro from S:\HCS_Platform\Scripts_Repository\Retro')
+disp('If functions are missing that will be due to a recent diet of the startup script - cantact Paul, Javier or Silvia for help')
+

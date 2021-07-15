@@ -1,0 +1,158 @@
+---
+title: "z-score count-gene enrico"
+author: "Jennifer Modamio Chamarro"
+date: "7/31/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+---
+title: "z-score transformation"
+author: "Jennifer Modamio Chamarro"
+date: "7/23/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+## libraries 
+install.packages("tidyverse")
+install.packages("dplyr")
+install.packages("rlang")
+
+remove.packages("glue")
+install.packages("rlang")
+remotes::install_github("cran/tibble")
+
+#install.packages("data.frame")
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(rlang)
+library(tibble)
+```
+
+
+
+```{r}
+
+snca_mutant_vs_wildtype_2021_rsubread_feature_counts_rnaseq_2021 <- read.delim("//atlas.uni.lux/users/jennifer.modamio/DVB_group/2021/transcriptomics/z-score/snca_mutant_vs_wildtype_2021_rsubread_feature_counts_rnaseq_2021.txt")
+View(snca_mutant_vs_wildtype_2021_rsubread_feature_counts_rnaseq_2021)
+
+data <- snca_mutant_vs_wildtype_2021_rsubread_feature_counts_rnaseq_2021
+```
+
+# check distribution (normal - non normal)? 
+
+# log transform - no normalized data 
+
+```{r}
+lg <- log(data[,2:7])
+names <- data.frame(data$row.names)
+namesUnique <- distinct(names)
+
+
+dataLog <- data.frame(data$row.names)
+dataLog[,2:7]<-lg
+
+write.csv(dataLog, file = 'dataLog.csv') # in csv format genes convert into dates 
+
+
+# Remove NaNs (division by 0...)
+is.nan.data.frame <- function(x)
+do.call(cbind, lapply(x, is.nan))
+dataLog[is.nan(dataLog)] <- NA
+
+# Remove Infinity values, replace by NA
+na_if(dataLog,  Inf) -> dataLog
+na_if(dataLog, -Inf) -> dataLog
+na_if(dataLog, 0) -> dataLog
+
+# Remove an entire row if it has >25 NAs (for example >50% of your features)
+count_na <- function(x)sum(is.na(x))
+data_new <- dataLog %>%
+  dplyr::mutate(count_na = apply(., 1, count_na))
+dataLog<-dataLog[!(data_new$count_na>=3),]
+
+```
+
+# calculate mean and SD 
+
+```{r}
+
+
+datameanSD <- data.frame(data$row.names)
+for (i in 1:length(dataLog$data.row.names)) {
+datameanSD[i,2] <- data.frame(mean(as.numeric(dataLog[i,2:7]), na.rm = TRUE))    
+datameanSD[i,3] <- sd(as.numeric(dataLog[i,2:7]), na.rm = TRUE)
+}
+   
+
+```
+
+# calculate z-score 
+
+```{r}
+setwd("//atlas.uni.lux/users/jennifer.modamio/DVB_group/2021/transcriptomics/z-score/")
+getwd()
+
+# z-score = value-mean/SD 
+
+zscore <- data.frame()
+for (i in 1:length(dataLog$data.row.names)) {
+ values <- ((dataLog[i,2:7])-datameanSD[i,2])/datameanSD[i,3]
+ zscore[i,1] = dataLog$data.row.names[i]
+ zscore[i,2] <- values$X317.SNCAx3.R1.drna.DVBt.DVB.S4.R1.001.bam
+ zscore[i,3] <- values$X317.SNCAx3.R2.drna.DVBt.DVB.S5.R1.001.bam
+ zscore[i,4] <- values$X317.SNCAx3.R3.drna.DVBt.DVB.S6.R1.001.bam
+ zscore[i,5] <- values$X232.WT.R1.drna.DVBt.DVB.S1.R1.001.bam
+ zscore[i,6] <- values$X232.WT.R2.drna.DVBt.DVB.S2.R1.001.bam
+ zscore[i,7] <- values$X232.WT.R3.drna.DVBt.DVB.S3.R1.001.bam
+ rm(values)
+} 
+
+write.csv(zscore, file = 'zscore.csv') # in csv format genes convert into dates 
+
+setwd("//atlas.uni.lux/users/jennifer.modamio/DVB_group/2021/transcriptomics/z-score/")
+getwd()
+
+
+
+exprs <- zscore[,2:ncol(zscore)]
+data_matrix <- data.matrix(zscore[,2:ncol(zscore)])
+heatmap(data_matrix)
+
+```
+# map only the genes that are significantly de-regulated
+
+```{r}
+
+setwd("//atlas.uni.lux/users/jennifer.modamio/DVB_group/2021/transcriptomics/z-score/")
+getwd()
+setwd("//atlas.uni.lux/users/jennifer.modamio/DVB_group/2021/transcriptomics/post-analysis logFoldChange/")
+
+FDRsig  <- read.csv("FDR_significant.csv")
+
+target <- c(intersect(FDRsig$Gene.symbol, zscores$V1))
+zScoreFDR <- filter(zscores, V1 %in% target)
+rm(target)
+
+colnames(zScoreFDR) <-c("genes" , "DB317_3xSNCA_R1", "DB317_3xSNCA_R2" ,"DB317_3xSNCA_R3", "DB232_WT_R1", "DB232_WT_R2" ,"DB232_WT_R3")
+
+
+exprs <- zScoreFDR[,2:ncol(zScoreFDR)]
+data_matrix <- data.matrix(zScoreFDR[,2:ncol(zScoreFDR)])
+heatmap(data_matrix)
+
+```
+
+
+
+

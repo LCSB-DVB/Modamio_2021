@@ -1,0 +1,473 @@
+---
+title: "Analysis of MEA data and plotting - using output from matlab"
+output: html_notebook
+Jennifer Modamio 2021-07-15
+---
+
+
+```{r}
+library(ggplot2)
+# library(RColorBrewer)
+library(tidyverse)
+library(ggpubr)
+```
+
+
+```{r}
+
+# load data 
+# in excel pre generate a file with only including well information / R error when duplicated row names 
+
+setwd("//atlas.uni.lux/users/jennifer.modamio/DVB_group/2021/MEA/New analysis_removing outliers/3rdPlate_perElectrode_noOutliers/")
+
+
+# NOTE: before and during loading, re-check the index of the rows. it is variable in some files (not fix index between extracted files)
+
+ d15 <- read.csv("T0A_JM_15dayDiff_BrainPhys_20210211_3rd_cond_compiler.csv", header = T, skip = 156, sep=",",   nrows = 26)
+ n <- d15$Measurement
+ d15t <- as.data.frame(t(d15[,-1]))   
+colnames(d15t) <- n  
+ m <- rownames(d15t) 
+ d15t %>% mutate(wells = rownames(d15t)) %>% mutate(timePoint = "day15") %>% mutate(day = 15) %>% mutate(experiment = "exp3") ->  d15t
+ m -> rownames(d15t)
+
+ d30 <- read.csv("T1A_JM_30dayDiff_BrainPhys_20210225_3rd_cond_compiler.csv", header = T, skip = 156, sep=",",     nrows = 26)
+ n <- d30$Measurement
+ d30t <- as.data.frame(t(d30[,-1])) 
+ colnames(d30t) <- n  
+ m <- rownames(d30t) 
+ d30t %>% mutate(wells = rownames(d30t)) %>% mutate(timePoint = "day30") %>% mutate(day = 30)  %>% mutate(experiment = "exp3") ->   d30t
+ m -> rownames(d30t)
+ 
+ d70 <- read.csv("T2A_JM_70dayDiff_BrainPhys_3st_20210408_3rd_cond_compiler.csv", header = T,skip = 156, sep=",",   nrows = 26)
+ n <- d70$Measurement
+ d70t <- as.data.frame(t(d70[,-1]))  
+  colnames(d70t) <- n  
+   m <- rownames(d70t) 
+ d70t %>% mutate(wells = rownames(d70t)) %>% mutate(timePoint = "day70") %>% mutate(day = 70) %>% mutate(experiment = "exp3") ->  d70t
+ m -> rownames(d70t)
+ 
+ d90 <- read.csv("T3A_JM_90-100dayDiff_BrainPhys_3rd_20210505_3rd_cond_compiler.csv", header = T, skip = 156, sep=",",   nrows = 26)
+ n <- d90$Measurement 
+ d90t <- as.data.frame(t(d90[,-1]))   
+ colnames(d90t) <- n  
+  m <- rownames(d90t) 
+ d90t %>% mutate(wells = rownames(d90t)) %>% mutate(timePoint = "day90") %>% mutate(day = 90) %>% mutate(experiment = "exp3") ->  d90t
+ m -> rownames(d90t)
+ 
+  d120 <- read.csv("T4A_JM_120_dayDiff_BrainPhys_3rd_20210525_3rd_cond_compiler.csv", header = T, skip = 156, sep=",",   nrows = 26)
+ n <- d120$Measurement 
+ d120t <- as.data.frame(t(d120[,-1]))   
+ colnames(d120t) <- n  
+  m <- rownames(d120t) 
+ d120t %>% mutate(wells = rownames(d120t)) %>% mutate(timePoint = "day120") %>% mutate(day = 120) %>% mutate(experiment = "exp3") ->  d120t
+ m -> rownames(d120t)
+ 
+ 
+ setwd("//atlas.uni.lux/users/jennifer.modamio/DVB_group/2021/MEA/New analysis_removing outliers/3rdPlate_perElectrode_noOutliers/")
+ 
+ 
+ 
+ 
+ 
+```
+
+# merge data. obtain sumary data file (over threshold and without threshold) 
+
+```{r}
+
+# cahnge folder for results 
+#setwd("//atlas.uni.lux/users/jennifer.modamio/DVB_group/2021/MEA/New analysis_removing outliers/3rdPlate_perElectrode_noOutliers/no_ko-snca/")
+
+setwd("//atlas.uni.lux/users/jennifer.modamio/DVB_group/2021/MEA/New analysis_removing outliers/3rdPlate_perElectrode_noOutliers/")
+
+ ## merge all files form different time points 
+dataWell <- rbind(d30t,d15t,d70t,d90t,d120t)
+head(dataWell)
+
+# add conditions to wells 
+
+
+colnames(dataWell)<-c( 'NumberOfSpikes', 'MeanFiringRate', 'ISI', 'NumberOfBurst','BurstDuration_avrg', 'BurstDuration_std', 'NumberSpikesPerBurst_avg', 'NumberSpikesPerBurst_std', 'meanISI_burst_avg','meanISI_burst_std','medianISI_burst_avg','medianISI_burst_std','InterBurstInterval_avg', 'InterBurstInterval_std', 'BurstFrequency', 'IBI_CoefficientOfVariation', 'Normalized_Duration_IQR','BurstPercentage', 'condition','wells', 'timepoint', 'day','experiment')
+
+# create colum for removal of outliers (per condition & timepoint)
+dataWell %>% mutate(out = paste(dataWell$condition, dataWell$timepoint)) ->  dataWell
+
+# convert into numeric all data of interest fro plotting (needed because data was as character) 
+dataWell$NumberOfSpikes <- as.numeric(as.character(dataWell$NumberOfSpikes))
+dataWell$MeanFiringRate <- as.numeric(as.character(dataWell$MeanFiringRate))
+dataWell$ISI <- as.numeric(as.character(dataWell$ISI))
+dataWell$NumberOfBurst <- as.numeric(as.character(dataWell$NumberOfBurst))
+dataWell$BurstDuration_avrg <- as.numeric(as.character(dataWell$BurstDuration_avrg))
+dataWell$BurstDuration_std <- as.numeric(as.character(dataWell$BurstDuration_std))
+dataWell$NumberSpikesPerBurst_avg <- as.numeric(as.character(dataWell$NumberSpikesPerBurst_avg))
+dataWell$NumberSpikesPerBurst_std <- as.numeric(as.character(dataWell$NumberSpikesPerBurst_std))
+dataWell$meanISI_burst_avg <- as.numeric(as.character(dataWell$meanISI_burst_avg))
+dataWell$meanISI_burst_std <- as.numeric(as.character(dataWell$meanISI_burst_std))
+dataWell$medianISI_burst_std <- as.numeric(as.character(dataWell$medianISI_burst_std))
+dataWell$medianISI_burst_avg <- as.numeric(as.character(dataWell$medianISI_burst_avg))
+dataWell$InterBurstInterval_avg <- as.numeric(as.character(dataWell$InterBurstInterval_avg))
+dataWell$InterBurstInterval_std <- as.numeric(as.character(dataWell$InterBurstInterval_std))
+dataWell$BurstFrequency <- as.numeric(as.character(dataWell$BurstFrequency))
+dataWell$IBI_CoefficientOfVariation <- as.numeric(as.character(dataWell$IBI_CoefficientOfVariation))
+dataWell$Normalized_Duration_IQR <- as.numeric(as.character(dataWell$Normalized_Duration_IQR))
+dataWell$BurstPercentage <- as.numeric(as.character(dataWell$BurstPercentage))
+dataWell$day <- as.numeric(as.character(dataWell$day))
+
+
+# obtain data only with bursting information for extracting into CSV and plotting in graphad (needed to take into consideration SD already calculated by software)
+dataWell_burst <- dataWell[dataWell$NumberOfBurst != 0, ] #remove wells with no information for bursting 
+
+dataWell_5spike <- dataWell[dataWell$NumberOfSpikes >= 5, ]
+dataWell_5spike_burst <- dataWell_burst[dataWell_burst$NumberOfSpikes >= 5, ]
+
+
+#saving info: 
+
+  #save summary file in CSV
+  write.csv(dataWell,file="dataWell_allInfo.csv")
+  write.csv(dataWell_5spike,file="dataWell_5spike.csv")
+  # save information reagrding average and std
+  write.csv(dataWell_burst,file="dataWell_burst_allInfo.csv") 
+  write.csv(dataWell_5spike_burst,file="dataWell_5spike_burst.csv")
+
+
+```
+
+
+# check normality (shapiro.test) 
+
+# Remove outliers based on 25th & 75th percentiles (for all wells based on a single feature)
+
+```{r} 
+# NOTE!! if zeros are kept, may infomation will be extracted based on a simple value due to the ceros being the mean !! 
+# transfrom 0 into NAs 
+
+
+dataWell_noZero <- replace(dataWell_5spike, dataWell_5spike == 0, NA)
+
+ groupOut <- unique(dataWell_noZero$out)
+ 
+ #groupOut <- c("WT day30" ,"3xSNCA day30" ,"KO-SNCA day30" ,"WT day15", "3xSNCA day15" , "KO-SNCA day15", "WT day70" ,"3xSNCA day70","KO-SNCA day70" ,"WT day90","3xSNCA day90","KO-SNCA day90")
+ 
+ 
+ index <- data.frame()
+ index2 <- data.frame()
+ index3 <- data.frame()
+ index4 <- data.frame()
+
+for (i in 1:length(groupOut))
+{
+  datatest <- dataWell_noZero %>% 
+  filter(out %in% groupOut[i]) # go for each line and extract rows for that line 
+  #exprs <- datatest[2:24] # extract the variables within that line 
+  feature_names <- colnames(datatest[1:18])  # create vector with names of variables 
+  for (j in 1:19) # for (j in 2:length(exprs))
+  {
+    out <- boxplot.stats(datatest[,j])$out
+    index2 <- data.frame()
+    for (k in 1:length(out))
+    {
+    index <- data.frame()
+    index <- datatest[datatest[,j]==out[k],]# sum up all index of all data so it can be removed all lies afterwards 
+    index2 <- rbind(index2,index)
+    rm(index)
+    }
+    index2 %>% mutate(cond_outlier = feature_names[j]) %>% mutate(group_tested = groupOut[i]) -> index3
+    index4 <- rbind(index4,index3)
+    rm(out, index2, index3)
+  }
+} 
+
+
+# remove data from extra "NA"
+
+ summary_out <- unique(index4[1:24])
+ summary_in <- setdiff(dataWell_noZero, summary_out)
+ 
+# Remove an entire row if it has >22 NAs (for example >50% of your features)
+count_na <- function(x)sum(is.na(x))
+data_noOut_well <- summary_in %>%
+  dplyr::mutate(count_na = apply(., 1, count_na))
+data_noOut_well <-summary_in[!(data_noOut_well$count_na >= 19),] # remove wells containing no info 
+
+
+# remove the data containinf outlayers from main dataset * a outlayer in one single feature will cause the removal of full well data 
+
+dataWell_burst_NoOut_well <- data_noOut_well[data_noOut_well$NumberOfBurst != 0, ] #remove wells with no information for bursting
+
+#saving info: 
+# files without outliers were generated from file No zeros - reason: too many zeros cause exclusion of real values as outliers 
+# _well > meaningn all well information was removed for all variable when at least one of the variables presented one outlier -> the well is not consider any longer 
+
+  write.csv(index4,file="index4_info_outliers.csv") # wells excluded, reason for exclusion and group 
+  write.csv(summary_out,file="summary_out_outliers.csv") # summary of wells excluded (no accounting reason)
+  write.csv(dataWell_noZero,file="dataWell_noZero.csv") # data well _ full information _ no zeros  
+  write.csv(dataWell_burst_NoOut_well,file="dataWell_burst_NoOut_well.csv") # infor for bursting (graphad) _no outliers *one oulier value excludes the whole well 
+  write.csv(data_noOut_well,file="data_noOut_well.csv") # infor - no outliers *one oulier value excludes the whole well 
+  
+  
+```
+
+# Remove outliers based on 25th & 75th percentiles (for only the specific feature under study_ introducetion NAs)
+# thes rest of the information for the full well remains 
+
+
+```{r} 
+# NOTE!! if zeros are kept, may infomation will be extracted based on a simple value due to the ceros being the mean !! 
+# transfrom 0 into NAs 
+
+
+#dataWell_noZero <- replace(dataWell, dataWell == 0, NA)
+datatest_NA <- data.frame()
+
+
+for (i in 1:length(groupOut))
+{
+  datatest <- dataWell_noZero %>% 
+  filter(out %in% groupOut[i]) # go for each line and extract rows for that line 
+  for (j in 1:19) # for (j in 2:length(exprs))
+  {
+    out <- boxplot.stats(datatest[,j])$out
+    for (k in 1:length(out))
+    {
+    datatest[,j][datatest[,j] == out[k]] <- NA
+    }
+    rm(out)
+  }
+  datatest_NA <- rbind(datatest_NA,datatest)
+  rm(datatest)
+} 
+
+
+#saving info: 
+# files without outliers were generated from file No zeros - reason: too many zeros cause exclusion of real values as outliers 
+# _well > meaningn all well information was removed for all variable when at least one of the variables presented one outlier -> the well is not consider any longer 
+
+# Remove an entire row if it has >22 NAs (for example >50% of your features)
+count_na <- function(x)sum(is.na(x))
+data_noOut_value <- datatest_NA %>%
+  dplyr::mutate(count_na = apply(., 1, count_na))
+data_noOut_value <-datatest_NA[!(data_noOut_value$count_na >= 19),] # remove wells containing no info 
+
+dataWell_burst_NoOut_value <- subset(data_noOut_value, !is.na(NumberOfBurst)) #remove wells with no information for bursting
+
+  write.csv(dataWell_burst_NoOut_value,file="dataWell_burst_NoOut_value.csv") # infor for bursting (graphad) _ only the specific outlier was removed. well information for other variables remain  
+  write.csv(data_noOut_value,file="data_noOut_value.csv") # infor - no outliers for specific variable -well info remains 
+  
+```
+
+```{r warning=FALSE}
+
+# removing data fro KO-SNCA line 
+data_noOut_value_KO = filter(data_noOut_value, !(condition %in% "KO-SNCA"))
+
+# cahnge folder for results 
+setwd("//atlas.uni.lux/users/jennifer.modamio/DVB_group/2021/MEA/New analysis_removing outliers/3rdPlate_perElectrode_noOutliers/no_ko-snca/")
+
+write.csv(data_noOut_value_KO,file="data_noOut_value_KO.csv") # infor - no outliers for specific variable -well info remains 
+ 
+```
+
+
+# plotting without SD already calculated ("NumberOfSpikes" "MeanFiringRate"  "ISI"  "NumberOfBurst"  "NumberBurstingElectrodes")
+
+
+```{r warning=FALSE}
+# datasets to test - remember to modify the saving name PDF 
+# dataWell
+# dataWell_noZero
+# data_noOut_well
+# data_noOut_value 
+
+
+head(data_noOut_value_KO)
+feature_names <- colnames(data_noOut_value_KO[,c(1:4,15:18)])  # extract only values (no average)
+# interspike interval [ISI]
+names <- c("Number Of Spikes", "Mean Firing Rate" , "Interspike Interval [ISI]"  ,"Number Of Burst" , "Burst Frequency","IBI Coefficient Of Variation", "Normalized Duration IQR"  ,  "Burst Percentage")
+
+
+for (i in 1:length(feature_names)) {
+data_noOut_value_KO %>%  # change dataset selected - change saving option depending on the dataset 
+  pivot_longer(cols=feature_names, names_to = "feature", values_to = "value") %>%
+  filter(feature %in% feature_names[i]) %>%
+  ggplot( aes(x = factor(condition, level = c( 'WT','3xSNCA')), y=value) ) +
+  geom_boxplot(aes(fill=fct_relevel(condition, 'WT','3xSNCA')),width=0.5,outlier.shape=NA) +
+  scale_fill_manual(values= c("#008B8B","#B22222","#2171b5"),name = "condition") +
+   # t-test
+  #stat_compare_means(comparisons=list(c("WT", "3xSNCA")), method = "t.test", label="p.signif", label.x = 1.5)+
+  
+  # Mann-Whitney
+  ggpubr::stat_compare_means(comparisons=list(c("WT", "3xSNCA")), method="wilcox.test", p.adjust.method="BH",label="p.signif", label.x = 1.5)+
+  
+    
+  facet_grid(~fct_relevel(timepoint, "day15","day30", "day70", "day90", "day120"), scales="free") +
+  labs(x     ="",
+       y     = paste(names[i]),
+       fill  = "Condition",
+       title = paste(names[i])) +
+  theme_bw() +
+    
+  theme(
+    axis.line = element_line(colour = 'black', size = 0.1) ,
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 5), #angle=45),
+    axis.title.y = element_text(size = 10),
+    axis.text.y = element_text(size=9, color="black"),
+    axis.ticks.y = element_line(),
+    legend.position="right",
+    legend.text = element_text(size = 11, face = "bold") ,
+    legend.title = element_blank(),
+    legend.key.size = unit(0.7, "cm"),
+    legend.key.width = unit(0.6,"cm"),
+    plot.title = element_text(size = 15, hjust=0.5, vjust= 1, face = "bold"),
+    plot.subtitle = element_blank(),#element_text(size = 2, hjust=0.5)
+    strip.text = element_text(size=12, vjust=0.5),
+    strip.background = element_rect(fill="lightgray"),
+    panel.border = element_rect(fill = NA, color = "black"),
+    panel.spacing.y = unit(0.8, "lines"),
+    strip.switch.pad.wrap=unit(20, "lines")
+  )  -> p
+  t<- cowplot::ggdraw(cowplot::add_sub(p, "Wilcox-test, ***p=0.001, **p=0.01, *p=0.05",hjust=-0.5, size=9))
+  print(t)
+
+  ggsave(paste0(Sys.Date(),"_", feature_names[i], "_data_noOut_value_electrode.pdf"), plot=t) # change saving option depending on the dataset 
+
+}
+
+```
+
+
+# plot into timeline with Standard deviation 
+
+```{r warning=FALSE}
+
+#"NumberOfSpikes" 
+#"MeanFiringRate" 
+#"ISI" 
+#"NumberOfBurst" 
+#"NumberBurstingElectrodes"
+
+data_noOut_value_KO %>%
+  ggplot(aes(x=day, y=NumberOfSpikes, group=condition, color=condition)) +
+  stat_smooth(method='loess', formula ='y ~ x', size = 1)+
+  scale_colour_manual(name="Condition", values= c("WT"= "#008B8B", "3xSNCA"="#B22222")) +
+  # facet_wrap(~timepoint, scales="free", labeller = labeller(groupwrap = label_wrap_gen(10))) +
+  # facet_grid(~fct_relevel(timepoint, "day15","day30",  "day70", "day90"), scales="free") +
+  labs(x="Time of differentiation [days]",
+        y     = "Number of Spikes",
+       fill  = "Condition",
+       title = "Total number of Spikes") +
+   theme_bw() -> p
+  t<- cowplot::ggdraw(cowplot::add_sub(p, "Locally estimated scatterplot smoothing: y ~ Time",hjust=-0.2, size=9))
+  print(t)
+  ggsave(paste0(Sys.Date(),"NumberOfSpikes_timeline_data_noOut_value.pdf"), plot=t)
+```
+
+```{r warning=FALSE}
+
+#"NumberOfSpikes" 
+#"MeanFiringRate" 
+#"ISI" 
+#"NumberOfBurst" 
+#"NumberBurstingElectrodes"
+
+data_noOut_value_KO %>%
+  ggplot(aes(x=day, y=MeanFiringRate, group=condition, color=condition)) +
+  stat_smooth(method='loess', formula ='y ~ x', size = 1)+
+  scale_colour_manual(name="Condition", values= c("WT"= "#008B8B", "3xSNCA"="#B22222")) +
+  # facet_wrap(~timepoint, scales="free", labeller = labeller(groupwrap = label_wrap_gen(10))) +
+  # facet_grid(~fct_relevel(timepoint, "day15","day30",  "day70", "day90"), scales="free") +
+  labs(x="Time of differentiation [days]",
+        y     = "Mean Firirng rate",
+       fill  = "Condition",
+       title = "Mean Firirng rate") +
+   theme_bw() -> p
+  t<- cowplot::ggdraw(cowplot::add_sub(p, "Locally estimated scatterplot smoothing: y ~ Time",hjust=-0.2, size=9))
+  print(t)
+  ggsave(paste0(Sys.Date(),"MeanFiringRate_timeline_data_noOut_value.pdf"), plot=t)
+```
+
+```{r warning=FALSE}
+
+#"NumberOfSpikes" 
+#"MeanFiringRate" 
+#"ISI" 
+#"NumberOfBurst" 
+#"NumberBurstingElectrodes"
+
+data_noOut_value_KO %>%
+  ggplot(aes(x=day, y=ISI, group=condition, color=condition)) +
+  stat_smooth(method='loess', formula ='y ~ x', size = 1)+
+  scale_colour_manual(name="Condition", values= c("WT"= "#008B8B", "3xSNCA"="#B22222")) +
+  # facet_wrap(~timepoint, scales="free", labeller = labeller(groupwrap = label_wrap_gen(10))) +
+  # facet_grid(~fct_relevel(timepoint, "day15","day30",  "day70", "day90"), scales="free") +
+  labs(x="Time of differentiation [days]",
+        y     = "[ISI]",
+       fill  = "Condition",
+       title = "interspike interval [ISI]") +
+   theme_bw() -> p
+  t<- cowplot::ggdraw(cowplot::add_sub(p, "Locally estimated scatterplot smoothing: y ~ Time",hjust=-0.2, size=9))
+  print(t)
+  ggsave(paste0(Sys.Date(),"ISI_timeline_data_noOut_value.pdf"), plot=t)
+```
+
+
+  
+  Extract later time points 
+  
+```{r warning=FALSE}
+
+# removing later time points for visualization 
+
+data_noOut_value_time = filter(data_noOut_value_KO, !(timepoint %in% "day120"))
+data_noOut_value_time = filter(data_noOut_value_time, !(timepoint %in% "day90"))
+```
+  
+```{r warning=FALSE}
+
+#"NumberOfSpikes" 
+#"MeanFiringRate" 
+#"ISI" 
+#"NumberOfBurst" 
+#"NumberBurstingElectrodes"
+
+data_noOut_value_time %>%
+  ggplot(aes(x=day, y=MeanFiringRate, group=condition, color=condition)) +
+  stat_smooth(method='loess', formula ='y ~ x', size = 1)+
+  scale_colour_manual(name="Condition", values= c("WT"= "#008B8B", "3xSNCA"="#B22222")) +
+  # facet_wrap(~timepoint, scales="free", labeller = labeller(groupwrap = label_wrap_gen(10))) +
+  # facet_grid(~fct_relevel(timepoint, "day15","day30",  "day70", "day90"), scales="free") +
+  labs(x="Time of differentiation [days]",
+        y     = "Mean Firirng rate",
+       fill  = "Condition",
+       title = "Mean Firirng rate") +
+   theme_bw() -> p
+  t<- cowplot::ggdraw(cowplot::add_sub(p, "Locally estimated scatterplot smoothing: y ~ Time",hjust=-0.2, size=9))
+  print(t)
+  ggsave(paste0(Sys.Date(),"MeanFiringRate_timeline_data_noOut_value_time.pdf"), plot=t)
+```
+
+```{r warning=FALSE}
+
+#"NumberOfSpikes" 
+#"MeanFiringRate" 
+#"ISI" 
+#"NumberOfBurst" 
+#"NumberBurstingElectrodes"
+
+data_noOut_value_time %>%
+  ggplot(aes(x=day, y=NumberOfSpikes, group=condition, color=condition)) +
+  stat_smooth(method='loess', formula ='y ~ x', size = 1)+
+  scale_colour_manual(name="Condition", values= c("WT"= "#008B8B", "3xSNCA"="#B22222")) +
+  # facet_wrap(~timepoint, scales="free", labeller = labeller(groupwrap = label_wrap_gen(10))) +
+  # facet_grid(~fct_relevel(timepoint, "day15","day30",  "day70", "day90"), scales="free") +
+  labs(x="Time of differentiation [days]",
+        y     = "[ISI]",
+       fill  = "Condition",
+       title = "interspike interval [ISI]") +
+   theme_bw() -> p
+  t<- cowplot::ggdraw(cowplot::add_sub(p, "Locally estimated scatterplot smoothing: y ~ Time",hjust=-0.2, size=9))
+  print(t)
+  ggsave(paste0(Sys.Date(),"NumberOfSpikes_timeline_data_noOut_value_time.pdf"), plot=t)
+```

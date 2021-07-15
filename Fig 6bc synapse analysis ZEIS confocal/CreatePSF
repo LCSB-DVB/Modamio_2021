@@ -1,0 +1,36 @@
+%% Create psf
+    %Red (PSD95)
+    %(575+610)/2 = 592.5
+    %Green (Synaptophysin)
+    %(500+550)/2 = 525    
+    % Manual setup of psfs at project start
+    % Go to http://bigwww.epfl.ch/algorithms/psfgenerator/
+    % download PSFGenerator.jar and add it to your workspace
+    javaaddpath ./PSFGenerator.jar % add java library for the generation of model based point spread functions to matlab's java path
+    
+    
+    %% Start GUI
+    PSFGenerator.gui; % Set the parameters of the GUI. You may want to set the psf z size to the same size as your image Im's z size
+    % See screenshot GUI_PSF_20161913.PNG
+    
+    %% Do Gui settings
+    
+    %% Save psf
+    psf = PSFGenerator.get; % Compute a PSF from the GUI parameters
+    vol(psf, 0, 1000, 'hot')
+    psf = double(psf);
+    %vi(psf)
+    
+    %% save manually as appropriate
+    %save('psf_blue.mat', 'psf')% Please rename manually to indicate channel and date. PS documentatation by snipping tool is recommended
+    %save('psf_green.mat', 'psf')% Please rename manually to indicate channel and date. PS documentatation by snipping tool is recommended
+    %save('psf_red.mat', 'psf')% Please rename manually to indicate channel and date. PS documentatation by snipping tool is recommended
+    %save('psf_deepred.mat', 'psf')% Please rename manually to indicate channel and date. PS documentatation by snipping tool is recommended    
+    
+    %%
+    demo = 0
+    if demo == 1
+        psf_Green = load('psf_green.mat');
+        psf_Green = psf_Green.psf; vol(psf_Green)
+        [RedDeconvolvedIm, PSF] = deconvblind(ImGreen, psf_Green, 10, 0); % Matlab internal function
+    end

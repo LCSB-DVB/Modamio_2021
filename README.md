@@ -3,11 +3,11 @@
 ## Fig 1b: 
 Analysis/quantification of total and conformation specific alpha-synuclein via immunostaining. Acquisition in high content imaging microscope OPERETTA (20X high NA). Analysis in Matlab – 2017b. 
 ## Fig 2ab: A
-nalysis/quantification of confocal images (60X) for total and phosphorylates (ps129) alpha-synuclein treated with lambda phosphatase and untreated. 
+Analysis/quantification of confocal images (60X) for total and phosphorylates (ps129) alpha-synuclein treated with lambda phosphatase and untreated. 
 ## Fig 2cd 8a: 
 Analysis/quantification of ps129 alpha-synuclein via immunostaining. Acquisition in high content imaging microscope OPERETTA (20X high NA). Analysis in Matlab – 2017b. 
 ## Fig 3ab: 
-Analysis/quantification of TH & TUJ1 (neuronal population) via immunostaining. Acquisition in high content imaging microscope OPERETTA (20X high NA). Analysis in Matlab – 2017b. 
+Analysis/quantification of TH & TUJ1 (neuronal population) via immunostaining. Acquisition in high content imaging microscope OPERETTA (20X high NA). Analysis in Matlab 
 ## Fig 3cd 8b: 
 Analysis/quantification of GFAP (astrocytic population) via immunostaining. Acquisition in high content imaging microscope OPERETTA (20X high NA). Analysis in Matlab – 2017b.
 ## Fig 4abc 9a: 

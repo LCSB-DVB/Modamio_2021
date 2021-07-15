@@ -1,0 +1,233 @@
+---
+title: "Diabolo & spls"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+ BiocManager::install("mixOmics")
+
+ 
+ install.packages("devtools")
+# then load
+library(devtools)
+install_github("mixOmicsTeam/mixOmics")
+
+library(mixOmics)
+
+```
+
+```{r}
+setwd("//atlas/users/sarah.nickels/Postdoc II/Side projects/data Integration/Jennifer/")
+
+
+```
+
+
+
+```{r}
+#data(nutrimouse)
+#X <- nutrimouse$gene
+
+# from csv file - load files to integrate
+
+MET_SNCA<- read.csv("20210505_summary_J3.csv", row.names = 1, header = TRUE)
+RNA_SNCA <- read.csv("RNA_J3.csv", row.names = 1, header = TRUE)
+
+metadata <- read.csv("meta_J3.csv", row.names = 1, header = TRUE)
+
+
+MET_SNCA=t(MET_SNCA)
+MET_SNCA=as.data.frame(MET_SNCA)
+
+
+RNA_SNCA=t(RNA_SNCA)
+RNA_SNCA=as.data.frame(RNA_SNCA)
+
+# get rid of replicates that are not in both - done manually before
+
+#create dataset 
+# add lists
+
+LRRK2 = list(#NSC_MET_IM5=NSC_MET_IM5, 
+             MET_SNCA=MET_SNCA, 
+            # NSC_RNA_IM5=NSC_RNA_IM5, 
+             RNA_SNCA=RNA_SNCA,
+             metadata=metadata ) 
+
+
+LRRK2$cellline= as.factor(LRRK2$metadata$cellline)
+LRRK2$Genotype= as.factor(LRRK2$metadata$Genotype)
+
+
+```
+
+
+
+#Diabolo
+```{r}
+library(mixOmics)
+
+# extract training data and name each data frame
+
+
+X <- list(
+        MET_SNCA=MET_SNCA,
+          RNA_SNCA=RNA_SNCA
+         )
+
+#chose discrimating variable
+Y <- LRRK2$Genotype
+summary(Y)
+     
+```
+
+
+# choose 2 components (otherwise singular), check for only top 20 genes, and 5 metablites (small sampe size no tuning necessary)
+
+```{r}
+list.keepX <- list(
+ 
+          MET_SNCA= c(5,5),
+          RNA_SNCA= c(20,20) 
+          )
+
+
+```
+
+#check sparse and non sparse version 
+#order of rows plays a role, no duplicates in colums
+
+```{r}
+MyResult.diablo <- block.splsda(X, Y, keepX=list.keepX)
+plotIndiv(MyResult.diablo)
+plotVar(MyResult.diablo)
+
+plotVar(MyResult.diablo, cex=c(3,3), legend = TRUE)
+coordinates <- plotVar(MyResult.diablo, plot = FALSE)
+```
+
+
+```{r}
+
+plotIndiv(MyResult.diablo, 
+          ind.names = FALSE, 
+          legend=TRUE, cex=c(1,2),
+          title = 'Genotype with DIABLO')
+
+```
+
+```{r}
+#arrowplot
+plotArrow(MyResult.diablo, group=LRRK2$Genotype, legend = TRUE,
+          X.label = 'PLS comp 1', Y.label = 'PLS comp 2')
+```
+
+```{r}
+plotVar(MyResult.diablo, var.names = c(FALSE, FALSE),
+        legend=TRUE, pch=c(10,10))
+```
+
+```{r}
+plotDiablo(MyResult.diablo, ncomp = 1)
+
+plotDiablo(MyResult.diablo, ncomp = 2)
+
+
+```
+
+#circos plot
+```{r}
+X11()
+circosPlot(MyResult.diablo, comp= 1, cutoff= 0.7, showIntraLinks = T, line=TRUE, size.variables = 0.8)
+
+X11()
+
+X11()
+circosPlot(MyResult.diablo, comp =2, cutoff= 0.95, line=TRUE, size.variables = 1,)
+X11()
+
+```
+
+
+CIM heatmap
+
+
+```{r}
+# minimal example with margins improved:
+
+X11()
+cimDiablo(MyResult.diablo, comp=1, color.blocks = c('lightblue', 'lightgreen'),  margin=c(20,30), legend.position = "topright", size.legend = 1)
+
+X11()
+```
+
+
+```{r}
+
+X11()
+cimDiablo(MyResult.diablo, comp=2, color.blocks = c('darkorchid', 'red'),  margin=c(20,30), legend.position = "topright", size.legend = 1)
+
+X11()
+
+```
+
+#variable contribution
+```{r}
+#plotLoadings(MyResult.diablo, contrib = "max")
+plotLoadings(MyResult.diablo, comp = 1, contrib = "max")
+```
+
+```{r}
+#plotLoadings(MyResult.diablo, contrib = "max")
+
+
+a=plotLoadings(MyResult.diablo, comp = 1, contrib = "max")
+print(a)
+
+
+b=plotLoadings(MyResult.diablo, comp = 2, contrib = "max")
+print(b)
+
+
+```
+
+```{r}
+
+selection=selectVar(MyResult.diablo)
+write.table(selection, "selection.txt")
+```
+
+
+#network
+```{r}
+network(MyResult.diablo, blocks = c(1,2),
+        color.node = c('darkorchid', 'brown1'), 
+        cutoff = 0.6, save = 'jpeg', name.save = 'DIABLOnetwork')
+```
+
+```{r}
+x=network(MyResult.diablo, blocks = c(1,2
+                                      ), cutoff = 0.95,
+     save = 'jpeg', name.save = 'DIABLOnetwork')
+
+
+library(igraph)
+
+write.graph(x$gR, file = "network.gml", format = "gml")
+```
+
+
+
+
+```{r}
+MyResult.diablo$design
+
+```
